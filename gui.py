@@ -1,8 +1,12 @@
 from api_manager import ApiManager
 import tkinter.font as tkFont
 from tkinter import *
+from dotenv import load_dotenv
+import os
 
-api_manager = ApiManager("UQPqudQjdix3JlERYCDWKRVTCNCi4KpnhTkWfvLS7M8IapFs0ZjBFaZ8tGQ4PLox")
+
+load_dotenv()
+api_manager = ApiManager(os.getenv("GENIUS_API_KEY"))
 
 def search():
     global index_text
