@@ -1,8 +1,13 @@
-from api_manager import ApiManager
 import tkinter.font as tkFont
 from tkinter import *
+from tkinter import ttk
 from dotenv import load_dotenv
 import os
+
+from typing import Optional, List, Text
+
+from presentation_window import PresentationWindow
+from api_manager import ApiManager
 
 load_dotenv()
 api_manager = ApiManager(os.getenv("GENIUS_API_KEY"))
@@ -47,11 +52,37 @@ def right_key(event):
         music_show_text.config(text=current_text)
 
 
+class App(Tk):
+    def __init__(self):
+        super(App, self).__init__()
+
+        self.title('Main Window')
+
+        ttk.Button(
+            self,
+            text="Open Presentation Window",
+            command=self.open_presentation_window,
+        ).pack()
+        self.presentation_window: Optional[PresentationWindow] = None
+
+        # List of songs
+        # Each song is a list of text
+        # self.songs: List[Song] = []
+
+    def open_presentation_window(self):
+        if self.presentation_window is None:
+            self.presentation_window = PresentationWindow(self)
+
+    def close_presentation_window(self):
+        if self.presentation_window is not None:
+            self.presentation_window.destroy()
+
+
 pages_with_text = []
 index_text = 0
 current_text = ""
 
-window = Tk()
+window = App()
 # window.attributes("-fullscreen", True)
 font = tkFont.Font(size=50)
 
