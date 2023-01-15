@@ -8,6 +8,7 @@ from typing import Optional, List, Text
 
 from presentation_window import PresentationWindow
 from api_manager import ApiManager
+from song import Song
 
 load_dotenv()
 api_manager = ApiManager(os.getenv("GENIUS_API_KEY"))
@@ -57,17 +58,11 @@ class App(Tk):
         super(App, self).__init__()
 
         self.title('Main Window')
-
-        ttk.Button(
-            self,
-            text="Open Presentation Window",
-            command=self.open_presentation_window,
-        ).pack()
         self.presentation_window: Optional[PresentationWindow] = None
 
         # List of songs
         # Each song is a list of text
-        # self.songs: List[Song] = []
+        self.songs: List[Song] = []
 
     def open_presentation_window(self):
         if self.presentation_window is None:
@@ -78,6 +73,17 @@ class App(Tk):
             self.presentation_window.destroy()
 
 
+class SearchFrame(Frame):
+    def __init__(self, parent: App):
+        super(SearchFrame, self).__init__(parent)
+
+        ttk.Button(
+            self,
+            text="Open Presentation Window",
+            command=parent.open_presentation_window,
+        ).pack()
+
+
 pages_with_text = []
 index_text = 0
 current_text = ""
@@ -86,7 +92,7 @@ window = App()
 # window.attributes("-fullscreen", True)
 font = tkFont.Font(size=50)
 
-search_music_frame = Frame(window)
+search_music_frame = SearchFrame(window)
 
 song_name_label = Label(search_music_frame, text="Song Name", font=font)
 song_name = Entry(search_music_frame, font=font)
