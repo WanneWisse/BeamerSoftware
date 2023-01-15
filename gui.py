@@ -32,15 +32,19 @@ class App(Tk):
         # List of songs
         # Each song is a list of text
         self.songs: List[Song] = [
-            Song()  # added an empty default song
+            Song("empty panel")  # added an empty default song
         ]
         self._current_index = (0, 0)
 
         self.search_frame = SearchFrame(self)
         self.search_frame.pack()
 
+        self.song_list_frame = SongListFrame(self)
+        self.song_list_frame.pack()
+
         self.bind('<Right>', self.go_verse_right)
         self.bind('<Left>', self.go_verse_left)
+        self.focus()
 
     @property
     def current_index(self):
@@ -94,6 +98,7 @@ class App(Tk):
                 lyrics,
             )
         )
+        self.song_list_frame.song_list = list(map(lambda x: x.display, self.songs))
 
     def go_verse_right(self, event):
         song_index, verse_index = self.current_index
@@ -147,6 +152,28 @@ class SearchFrame(Frame):
 
         self.search_button = Button(self, text="search", command=parent.search, font=parent.DEFAULT_FONT)
         self.search_button.pack()
+
+
+class SongListFrame(Frame):
+    def __init__(self, parent: App):
+        super(SongListFrame, self).__init__(parent)
+
+        self._song_list = list(map(lambda x: x.display, parent.songs))
+        self.song_list_label = Label(
+            self,
+            text='\n'.join(self._song_list),
+            font=parent.DEFAULT_FONT,
+        )
+        self.song_list_label.pack()
+
+    @property
+    def song_list(self):
+        return self._song_list
+
+    @song_list.setter
+    def song_list(self, songs: List[str]):
+        self._song_list = songs
+        self.song_list_label.config(text='\n'.join(songs))
 
 
 window = App()
