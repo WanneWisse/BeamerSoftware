@@ -11,6 +11,7 @@ api_manager = ApiManager(os.getenv("GENIUS_API_KEY"))
 def search():
     global index_text
     global pages_with_text
+    global current_text
     artist_to_search = artist.get()
     song_to_search = song_name.get()
     pages_with_text = api_manager.get_pages_with_lyrics(song_to_search, artist_to_search)
@@ -28,16 +29,18 @@ def stop(event):
     search_music_frame.focus_set()
 
 
-def leftKey(event):
+def left_key(event):
     global index_text
+    global current_text
     if index_text > 0:
         index_text -= 1
         current_text = pages_with_text[index_text]
         music_show_text.config(text=current_text)
 
 
-def rightKey(event):
+def right_key(event):
     global index_text
+    global current_text
     if index_text < len(pages_with_text) - 1:
         index_text += 1
         current_text = pages_with_text[index_text]
@@ -49,7 +52,7 @@ index_text = 0
 current_text = ""
 
 window = Tk()
-window.attributes("-fullscreen", True)
+# window.attributes("-fullscreen", True)
 font = tkFont.Font(size=50)
 
 search_music_frame = Frame(window)
@@ -74,8 +77,8 @@ music_show_frame = Frame(window)
 
 music_show_text = Label(music_show_frame, text=current_text, font=font)
 music_show_text.pack()
-music_show_frame.bind('<Left>', leftKey)
-music_show_frame.bind('<Right>', rightKey)
+music_show_frame.bind('<Left>', left_key)
+music_show_frame.bind('<Right>', right_key)
 music_show_frame.bind('<Escape>', stop)
 
 window.mainloop()
