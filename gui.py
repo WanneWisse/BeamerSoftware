@@ -1,74 +1,180 @@
-from api_manager import ApiManager
 import tkinter.font as tkFont
 from tkinter import *
+from tkinter import ttk
+from dotenv import load_dotenv
+import os
 
-api_manager = ApiManager("UQPqudQjdix3JlERYCDWKRVTCNCi4KpnhTkWfvLS7M8IapFs0ZjBFaZ8tGQ4PLox")
+from typing import Optional, List, Text
 
-def search():
-    global index_text
-    global pages_with_text
-    artist_to_search = artist.get()
-    song_to_search = song_name.get()
-    pages_with_text = api_manager.get_pages_with_lyrics(song_to_search,artist_to_search)
-    index_text = 0 
-    current_text = pages_with_text[0]
-    music_show_text.config(text=current_text)
-    music_show_frame.pack()
-    music_show_frame.focus_set()
-    search_music_frame.forget()
+from presentation_window import PresentationWindow
+from api_manager import ApiManager
+from song import Song
 
-def stop(event):
-    music_show_frame.forget()
-    search_music_frame.pack()
-    search_music_frame.focus_set()
 
-def leftKey(event):
-    global index_text
-    if index_text > 0:
-        index_text -=1
-        current_text = pages_with_text[index_text]
-        music_show_text.config(text = current_text)
-    
+load_dotenv()
+api_manager = ApiManager(os.getenv("GENIUS_API_KEY"))
 
-def rightKey(event):
-    global index_text
-    if index_text < len(pages_with_text)-1:
-        index_text +=1
-        current_text = pages_with_text[index_text]
-        music_show_text.config(text = current_text)
 
-pages_with_text = []
-index_text = 0 
-current_text = ""
+class App(Tk):
+    def __init__(self):
+        super(App, self).__init__()
+        self.DEFAULT_FONT = tkFont.Font(size=12)
 
-window = Tk()
-window.attributes("-fullscreen", True)
-font = tkFont.Font(size = 50)
+        ttk.Button(
+            self,
+            text="Toggle Presentation Window",
+            command=self.toggle_presentation_window,
+        ).pack()
 
-search_music_frame=Frame(window)
+        self.title('Main Window')
+        self.presentation_window: Optional[PresentationWindow] = PresentationWindow(self)
 
-song_name_label = Label(search_music_frame, text="Song Name", font = font)
-song_name = Entry(search_music_frame, font=font)
+        # List of songs
+        # Each song is a list of text
+        self.songs: List[Song] = [
+            Song("empty panel")  # added an empty default song
+        ]
+        self._current_index = (0, 0)
 
-artist_label = Label(search_music_frame, text="Artist", font = font)
-artist = Entry(search_music_frame, font = font)
+        self.search_frame = SearchFrame(self)
+        self.search_frame.pack()
 
-search = Button(search_music_frame, text ="search", command = search, font=font)
+        self.song_list_frame = SongListFrame(self)
+        self.song_list_frame.pack()
 
-song_name_label.pack()
-song_name.pack()
+        self.bind('<Right>', self.go_verse_right)
+        self.bind('<Left>', self.go_verse_left)
+        self.focus()
 
-artist_label.pack()
-artist.pack()
-search.pack()
-search_music_frame.pack()
+    @property
+    def current_index(self):
+        return self._current_index
 
-music_show_frame = Frame(window)
+    @current_index.setter
+    def current_index(self, index):
+        song_index, verse_index = index
+        song_index = max(0, min(len(self.songs) - 1, song_index))
+        verse_index = max(0, min(self.songs[song_index].num_verses - 1, verse_index))
 
-music_show_text = Label(music_show_frame, text=current_text, font = font)
-music_show_text.pack()
-music_show_frame.bind('<Left>', leftKey)
-music_show_frame.bind('<Right>', rightKey)
-music_show_frame.bind('<Escape>', stop)
+        self._current_index = (song_index, verse_index)
 
+        if self.presentation_window_exists():
+            self.presentation_window.verse_text = self.current_verse_text
+
+    @property
+    def current_verse_text(self):
+        song_index, verse_index = self.current_index
+        return self.songs[song_index].verses[verse_index]
+
+    def toggle_presentation_window(self):
+        if not self.presentation_window_exists():
+            self.open_presentation_window()
+        else:
+            self.close_presentation_window()
+
+    def open_presentation_window(self):
+        if not self.presentation_window_exists():
+            self.presentation_window = PresentationWindow(self)
+
+    def close_presentation_window(self):
+        if self.presentation_window_exists():
+            self.presentation_window.destroy()
+            self.presentation_window = None
+
+    def presentation_window_exists(self):
+        if self.presentation_window is not None:
+            return self.presentation_window.winfo_exists()
+        return False
+
+    def search(self):
+        artist_to_search = self.search_frame.artist_entry.get()
+        song_to_search = self.search_frame.song_name_entry.get()
+        lyrics = api_manager.get_pages_with_lyrics(song_to_search, artist_to_search)
+
+        self.songs.append(
+            Song(
+                artist_to_search,
+                song_to_search,
+                lyrics,
+            )
+        )
+        self.song_list_frame.song_list = list(map(lambda x: x.display, self.songs))
+
+    def go_verse_right(self, event):
+        song_index, verse_index = self.current_index
+        current_song_len = self.songs[song_index].num_verses
+
+        new_verse_index = verse_index + 1
+        if new_verse_index < current_song_len:  # still in current song
+            self.current_index = (song_index, new_verse_index)
+        elif song_index + 1 >= len(self.songs):  # end of last song
+            # No need to change update current index
+            pass
+        else:  # go to next song
+            self.current_index = (song_index + 1, 0)
+
+    def go_verse_left(self, event):
+        song_index, verse_index = self.current_index
+        # current_song_len = self.songs[song_index].num_verses
+
+        new_verse_index = verse_index - 1
+        if new_verse_index >= 0:  # still in current song
+            self.current_index = (song_index, new_verse_index)
+        elif song_index - 1 < 0:  # beyond start of first song
+            # No need to change update current index
+            pass
+        else:  # go to previous song
+            new_song_index = song_index - 1
+            self.current_index = (new_song_index, self.songs[new_song_index].num_verses - 1)
+
+
+class SearchFrame(Frame):
+    def __init__(self, parent: App):
+        super(SearchFrame, self).__init__(parent)
+
+        self.song_name_label = ttk.Label(
+            self,
+            text="Song Name",
+            font=parent.DEFAULT_FONT,
+        )
+        self.song_name_entry = Entry(self, font=parent.DEFAULT_FONT)
+        self.song_name_label.pack()
+        self.song_name_entry.pack()
+
+        self.artist_label = Label(
+            self,
+            text="Artist",
+            font=parent.DEFAULT_FONT
+        )
+        self.artist_entry = Entry(self, font=parent.DEFAULT_FONT)
+        self.artist_label.pack()
+        self.artist_entry.pack()
+
+        self.search_button = Button(self, text="search", command=parent.search, font=parent.DEFAULT_FONT)
+        self.search_button.pack()
+
+
+class SongListFrame(Frame):
+    def __init__(self, parent: App):
+        super(SongListFrame, self).__init__(parent)
+
+        self._song_list = list(map(lambda x: x.display, parent.songs))
+        self.song_list_label = Label(
+            self,
+            text='\n'.join(self._song_list),
+            font=parent.DEFAULT_FONT,
+        )
+        self.song_list_label.pack()
+
+    @property
+    def song_list(self):
+        return self._song_list
+
+    @song_list.setter
+    def song_list(self, songs: List[str]):
+        self._song_list = songs
+        self.song_list_label.config(text='\n'.join(songs))
+
+
+window = App()
 window.mainloop()
