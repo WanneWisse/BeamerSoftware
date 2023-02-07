@@ -10,10 +10,11 @@ class PresentationWindow(tk.Toplevel):
 
         # Take parameter on which monitor to go fullscreen on
         self.attributes('-fullscreen', fullscreen)
+        self.configure(bg='white')
         self.geometry('1400x900')
         self.title('Presentation Window')
 
-        self._verse_text_label: ttk.Label = ttk.Label(self, font=self.PRESENTATION_FONT)
+        self._verse_text_label: ttk.Label = tk.Label(self, font=self.PRESENTATION_FONT, background='white')
         self._verse_text_label.pack()
 
         ttk.Button(
